@@ -180,10 +180,8 @@
         Anyway, this is more of a proof of concept and in a weird backwards way, I prefer
         to do my prototypes without jQuery.
       */
-      function parseFile(file){
-        if(localStorage[file.fileName]) {
-			return JSON.parse(localStorage[file.fileName]);
-		}
+      function parseFile(file, callback){
+        if(localStorage[file.fileName]) return callback(JSON.parse(localStorage[file.fileName]));
         ID3v2.parseFile(file,function(tags){
           //to not overflow localstorage
           localStorage[file.fileName] = JSON.stringify({
@@ -192,7 +190,7 @@
             Album: tags.Album,
             Genre: tags.Genre
           });
-          return tags;
+          callback(tags);
         })
       }
       
@@ -214,98 +212,26 @@
       }
       
       function $(id){return document.getElementById(id)}
-
-	  function showFile(f,tags) {
-		  console.log(tags);
-          var tr = document.createElement('tr');
-          var t2 = guessSong(f.webkitRelativePath || f.mozFullPath || f.fileName); 
-          //it should be innerText/contentText but its annoying.
-          var td = document.createElement('td');
-          td.innerHTML = tags.Title || t2.Title;
-          tr.appendChild(td);
-          
-          var td = document.createElement('td');
-          td.innerHTML = tags.Artist || t2.Artist;
-          tr.appendChild(td);
-          
-          var td = document.createElement('td');
-          td.innerHTML = tags.Album || t2.Album;
-          tr.appendChild(td);
-          
-          var td = document.createElement('td');
-          td.innerHTML = tags.Genre || "";
-          tr.appendChild(td);
-          tr.onclick = function(){
-            var pl = document.createElement('tr');
-            var st = document.createElement('td');
-            st.innerHTML = tags.Title || t2.Title;
-            pl.appendChild(st);
-            $("playtable").appendChild(pl);
-            pl.file = f;
-            pl.className = 'visible';
-            pl.onclick = function(e){
-              if(e && e.button == 1){
-                pl.parentNode.removeChild(pl);
-              }else{
-                var url;
-                if(window.createObjectURL){
-                  url = window.createObjectURL(f)
-                }else if(window.createBlobURL){
-                  url = window.createBlobURL(f)
-                }else if(window.URL && window.URL.createObjectURL){
-                  url = window.URL.createObjectURL(f)
-                }else if(window.webkitURL && window.webkitURL.createObjectURL){
-                  url = window.webkitURL.createObjectURL(f)
-                }
-                
-                $("player").src = url;
-                $("player").play();
-                for(var i = document.querySelectorAll('.playing'), l = i.length; l--;){
-                  i[l].className = '';
-                }
-                pl.className += ' playing';
-                currentSong = pl;
-              }
-            }
-            if($("playtable").childNodes.length == 1) pl.onclick();
-          }
-		  $('songtable').appendChild(tr);
-	  }
-                      
-      function process() {
-        if(queue.length){    
-          var f = queue.shift();
-		  var tags = parseFile(f);
-	      showFile(f,tags);
-          var lq = queue.length;
-          setTimeout(function(){
-            if(queue.length == lq){
-              process();
-            }
-          },300);
-        }
-      }	
-       
-	  var queue = [];
-
       function getSongs(files){
         $("mask").style.display = 'none';
         $("startup").style.display = 'none';
+        var queue = [];
         var mp3 = canPlay('audio/mpeg;'), ogg = canPlay('audio/ogg; codecs="vorbis"');
         for(var i = 0; i < files.length; i++){
           var file = files[i];
 	  
-	  	  var path = file.webkitRelativePath || file.mozFullPath || file.fileName;
+	  var path = file.webkitRelativePath || file.mozFullPath || file.fileName;
           if (path.indexOf('.AppleDouble') != -1) {
-			// Meta-data folder on Apple file systems, skip
-			continue;
+		// Meta-data folder on Apple file systems, skip
+		continue;
           }         
-	  	  var size = file.size || file.fileSize || 4096;
-	  	  if(size < 4095) { 
-			// Most probably not a real MP3
-			console.log(path);
-			continue;
-	  	  } 
+	  var size = file.size || file.fileSize || 4096;
+	  if(size < 4095) { 
+		// Most probably not a real MP3
+		console.log(path);
+		continue;
+	  }
+ 
           if(file.fileName.indexOf('mp3') != -1){ //only does mp3 for now
             if(mp3){
               queue.push(file);
@@ -316,15 +242,81 @@
               queue.push(file);
             }
           }
-        }        
-		console.log(files);
-		console.log(queue);
+        }
+                                
+        var process = function(){
+          if(queue.length){
+            
+            var f = queue.shift();
+            parseFile(f,function(tags){
+              console.log(tags);
+              var tr = document.createElement('tr');
+              var t2 = guessSong(f.webkitRelativePath || f.mozFullPath || f.fileName); 
+              //it should be innerText/contentText but its annoying.
+              var td = document.createElement('td');
+              td.innerHTML = tags.Title || t2.Title;
+              tr.appendChild(td);
+              
+              var td = document.createElement('td');
+              td.innerHTML = tags.Artist || t2.Artist;
+              tr.appendChild(td);
+              
+              var td = document.createElement('td');
+              td.innerHTML = tags.Album || t2.Album;
+              tr.appendChild(td);
+              
+              var td = document.createElement('td');
+              td.innerHTML = tags.Genre || "";
+              tr.appendChild(td);
+              tr.onclick = function(){
+                var pl = document.createElement('tr');
+                var st = document.createElement('td');
+                st.innerHTML = tags.Title || t2.Title;
+                pl.appendChild(st);
+                $("playtable").appendChild(pl);
+                pl.file = f;
+                pl.className = 'visible';
+                pl.onclick = function(e){
+                  if(e && e.button == 1){
+                    pl.parentNode.removeChild(pl);
+                  }else{
+                    var url;
+                    if(window.createObjectURL){
+                      url = window.createObjectURL(f)
+                    }else if(window.createBlobURL){
+                      url = window.createBlobURL(f)
+                    }else if(window.URL && window.URL.createObjectURL){
+                      url = window.URL.createObjectURL(f)
+                    }else if(window.webkitURL && window.webkitURL.createObjectURL){
+                      url = window.webkitURL.createObjectURL(f)
+                    }
+                    
+                    $("player").src = url;
+                    $("player").play();
+                    for(var i = document.querySelectorAll('.playing'), l = i.length; l--;){
+                      i[l].className = '';
+                    }
+                    pl.className += ' playing';
+                    currentSong = pl;
+                  }
+                }
+                if($("playtable").childNodes.length == 1) pl.onclick();
+              }
+              $('songtable').appendChild(tr);
+              process();
+            })
+            var lq = queue.length;
+            setTimeout(function(){
+              if(queue.length == lq){
+                process();
+              }
+            },300);
+          }
+        }
         process();
         
-        
+        console.log(files);
       }
-
-
 
       var currentSong = 0;
 
