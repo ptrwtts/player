@@ -262,35 +262,58 @@
 	for(var i=0; i<numWorkers; i++) {	 
 	  worker[i] = new Worker('worker.js');
 	  worker[i].num = i;
+	  worker[i].count = 0;
+	  worker[i].status = 'working';
 	  worker[i].onmessage = function(e) {
-		//goodFiles.push(e.data.clean);
-		if(queue.length>1000) { 
-			if(queue.length%100==0) { showFile(e.data.file,e.data.tags); }
-		} else {
-			showFile(e.data.file,e.data.tags); 
+		if(this.status=='working') {
+			this.count++;
+			//goodFiles.push(e.data.clean);		
+			if(queue.length>1000) { 
+				if((this.count+(this.num*25))%100==0) { showFile(e.data.file,e.data.tags); }
+			} else {
+				showFile(e.data.file,e.data.tags); 
+			}
+			processNext(this);
+			/* Maybe they just need some rest?
+			if(this.count%100==0) {
+				// Good job son! You've earned a break!
+				this.status = 'resting';
+				console.log("Worker "+this.num+" is resting");
+				window.setTimeout("wakeUp("+eval(this.num)+")",10000);
+			} else {
+				processNext(this);	
+			}		
+			*/
 		}
-		//console.log(e.data);
-		clearTimeout(timer[this.num]);
-		processNext(this);			
 	  }
 	}
         
-	var timer = {};
+
 	function processNext(worker) {	
 		if(queue.length>0) {
 			var next = queue.shift();
 			worker.postMessage(next);
 			if(queue.length%100==0) { console.log(queue.length); }
 			//console.log(queue.length);
-            timer[worker.num] = setTimeout("rescueWorker("+eval(worker.num)+")",300);
+            window.setTimeout("rescueWorker("+eval(worker.num)+","+eval(worker.count)+")",300);
 		} else {
 			workEnd = new Date().getTime();
-			console.log('Completed in '+(workEnd-workStart)+'ms');
+			console.log('Completed in '+(workEnd-workStart)+'ms');			
+			worker.status = 'done';
 			worker.terminate();
+			
 		}
 	}
-	function rescueWorker(i) {
-		//console.log('man down!');
+	function rescueWorker(num,count) {
+		// Man down!
+		if(worker[num].status=='working' && worker[num].count==count) {
+			processNext(worker[num]);
+		}
+	}
+	function wakeUp(i) {
+		// Quit lying around! Back to work!
+		console.log('revive! '+i);
+		worker[i].status = 'working';
 		processNext(worker[i]);
 	}
        
