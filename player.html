@@ -201,7 +201,7 @@
       function $(id){return document.getElementById(id)}
 
 	  function showFile(f,tags) {
-		  console.log(tags);
+		  //console.log(tags);
           var tr = document.createElement('tr');
           var t2 = guessSong(f.webkitRelativePath || f.mozFullPath || f.fileName); 
           //it should be innerText/contentText but its annoying.
@@ -256,19 +256,43 @@
           }
 		  $('songtable').appendChild(tr);
 	  }
-                  
-	
+          
+	var numWorkers = 4;
+	var worker = {};
+	for(var i=0; i<numWorkers; i++) {	 
+	  worker[i] = new Worker('worker.js');
+	  worker[i].num = i;
+	  worker[i].onmessage = function(e) {
+		//goodFiles.push(e.data.clean);
+		if(queue.length>1000) { 
+			if(queue.length%100==0) { showFile(e.data.file,e.data.tags); }
+		} else {
+			showFile(e.data.file,e.data.tags); 
+		}
+		//console.log(e.data);
+		clearTimeout(timer[this.num]);
+		processNext(this);			
+	  }
+	}
+        
+	var timer = {};
 	function processNext(worker) {	
 		if(queue.length>0) {
 			var next = queue.shift();
 			worker.postMessage(next);
+			if(queue.length%100==0) { console.log(queue.length); }
+			//console.log(queue.length);
+            timer[worker.num] = setTimeout("rescueWorker("+eval(worker.num)+")",300);
 		} else {
 			workEnd = new Date().getTime();
 			console.log('Completed in '+(workEnd-workStart)+'ms');
 			worker.terminate();
 		}
 	}
-		
+	function rescueWorker(i) {
+		//console.log('man down!');
+		processNext(worker[i]);
+	}
        
 	  var queue = [];
 	  var workStart = 0;
@@ -290,7 +314,7 @@
 	  	  var size = file.size || file.fileSize || 4096;
 	  	  if(size < 4095) { 
 			// Most probably not a real MP3
-			console.log(path);
+			//console.log(path);
 			continue;
 	  	  } 
           if(file.fileName.indexOf('mp3') != -1){ //only does mp3 for now
@@ -307,16 +331,7 @@
 		console.log(files);
 		console.log(queue.length);
 		
-		var numWorkers = 8;
-		var worker = {};
 		for(var i=0; i<numWorkers; i++) {	 
-		  worker[i] = new Worker('worker.js');
-		  worker[i].onmessage = function(e) {
-			//goodFiles.push(e.data.clean);
-			showFile(e.data.file,e.data.tags);
-			console.log(e.data);
-			processNext(this);
-		  }
 		  processNext(worker[i]);
 		}      
         

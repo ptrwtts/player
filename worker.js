@@ -1,12 +1,12 @@
 self.onmessage = function(e){	
   var file = e.data;
-  try {
+  //self.postMessage('test');
+  ///*
 	  ID3v2.parseFile(file,function(tags){
 	    self.postMessage({'tags':tags,'file':file});
 	  });
-  } catch (err) {
-	self.postMessage(err);
-}
+  //*/
+
 }
 
 ID3v2 = {
@@ -524,7 +524,7 @@ ID3v2 = {
 		})
 	}
 	
-	
+
 	read(3, function(header){
 		if(header == "ID3"){
 			read(2, function(s, version){
