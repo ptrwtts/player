@@ -267,12 +267,15 @@
 	  worker[i].onmessage = function(e) {
 		if(this.status=='working') {
 			this.count++;
-			//goodFiles.push(e.data.clean);		
+			//goodFiles.push(e.data.clean);	
+			showFile(e.data.file,e.data.tags); 
+			/*	
 			if(queue.length>1000) { 
 				if((this.count+(this.num*25))%100==0) { showFile(e.data.file,e.data.tags); }
 			} else {
 				showFile(e.data.file,e.data.tags); 
 			}
+			*/
 			processNext(this);
 			/* Maybe they just need some rest?
 			if(this.count%100==0) {
@@ -488,7 +491,7 @@
           This is <b>almost certainly</b> the first mp3 player of its kind. Right above you should see a file prompt, go and select your <b>music folder</b>. It will index songs on your hard drive, read ID3 tags, play songs and it works offline. <b>HTML5 is awesome.</b>
         </p>
         <p style="padding-left: 15px">
-          By <a href="http://twitter.com/antimatter15">@antimatter15</a> <a href="http://antimatter15.com">http://antimatter15.com</a>
+          By <a href="http://twitter.com/antimatter15">@antimatter15</a> / <a href="http://twitter.com/ptrwtts">@ptrwtts</a>
         </p>
       </div>
       <div id="support" style="position:absolute;z-index:99999;color:red;font-size:x-large"> <!-- insert cheap knockoff modernizer clone -->
